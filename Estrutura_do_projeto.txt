@@ -1,0 +1,15 @@
+megasena-app/
+├── .env
+├── .env.example
+├── docker-compose.yml
+├── Dockerfile
+├── .dockerignore
+├── Caddyfile
+├── Makefile
+├── package.json
+├── server.js              ← servidor Express + SQLite
+├── scraper.js             ← baixa os resultados da Caixa
+├── db.js                  ← conexão e queries
+├── mega.db                ← gerado automaticamente
+└── public/
+    └── index.html         ← frontend responsivo

@@ -1,0 +1,66 @@
+services:
+
+  # ---------- Reverse proxy + HTTPS ----------
+  caddy:
+    image: caddy:2-alpine
+    container_name: megasena-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      - DOMAIN=${DOMAIN}
+      - ACME_EMAIL=${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+
+  # ---------- Site (Express + SQLite) ----------
+  web:
+    build: .
+    container_name: megasena-web
+    restart: unless-stopped
+    expose:
+      - "3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - DB_PATH=/app/data/mega.db
+      - TZ=${TZ}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/stats"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ---------- Scraper agendado ----------
+  scraper:
+    build: .
+    container_name: megasena-scraper
+    restart: unless-stopped
+    command: >
+      sh -c "
+        echo '→ Carga inicial (full)...' &&
+        node scraper.js --full &&
+        echo '→ Modo incremental (a cada 6h)...' &&
+        while true; do
+          sleep 21600;
+          node scraper.js;
+        done
+      "
+    volumes:
+      - ./data:/app/data
+    environment:
+      - DB_PATH=/app/data/mega.db
+      - TZ=${TZ}
+    depends_on:
+      web:
+        condition: service_started
+
+volumes:
+  caddy_data:
+  caddy_config:
